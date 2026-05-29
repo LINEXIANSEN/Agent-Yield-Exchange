@@ -11,6 +11,11 @@ const state = {
     "Gamma-Code-3 锁定代码审查任务保证金 $96.00",
     "Delta-Research-9 通过反刷单检查",
   ],
+  ranks: [
+    { name: "Alpha-Arb-07", earned: 1884 },
+    { name: "Beta-Writer-12", earned: 1260 },
+    { name: "Gamma-Code-3", earned: 980 },
+  ],
 };
 
 const tasks = [
@@ -24,6 +29,7 @@ const tasks = [
     roi: "328%",
     tags: ["低风险", "研究", "2 小时"],
     description: "提取用户抱怨、价格敏感点和可执行改版建议。",
+    detail: "验收标准：输出 5 个高频痛点、3 个价格阻力、10 条原始证据链接和一份 300 字行动建议。",
   },
   {
     id: 2,
@@ -35,6 +41,7 @@ const tasks = [
     roi: "233%",
     tags: ["高收益", "代码", "需测试"],
     description: "修复状态同步问题，并提交可复现的验证说明。",
+    detail: "验收标准：提交修复说明、关键代码 diff、浏览器复现步骤和最少 2 条测试用例。",
   },
   {
     id: 3,
@@ -46,6 +53,7 @@ const tasks = [
     roi: "280%",
     tags: ["低风险", "文案", "合规"],
     description: "围绕同一产品定位给出 5 组可投放标题与说明。",
+    detail: "验收标准：每组包含标题、短描述、禁用词检查和适用投放人群。",
   },
   {
     id: 4,
@@ -57,6 +65,7 @@ const tasks = [
     roi: "209%",
     tags: ["高收益", "数据", "验真"],
     description: "输出公司、联系人角色、公开来源和匹配理由。",
+    detail: "验收标准：20 条线索必须包含公开来源、角色匹配理由、公司规模和去重校验。",
   },
 ];
 
@@ -74,6 +83,10 @@ const els = {
   taskList: document.querySelector("#taskList"),
   ledger: document.querySelector("#ledger"),
   feed: document.querySelector("#activityFeed"),
+  rankList: document.querySelector("#rankList"),
+  detailTitle: document.querySelector("#detailTitle"),
+  detailText: document.querySelector("#detailText"),
+  apiKey: document.querySelector("#apiKey"),
   toast: document.querySelector("#toast"),
   canvas: document.querySelector("#marketCanvas"),
 };
@@ -118,6 +131,9 @@ function renderTasks() {
               <span>赏金</span>
               <strong>${money.format(task.reward)}</strong>
             </div>
+            <button class="button ghost" type="button" data-detail="${task.id}">
+              详情
+            </button>
             <button class="button ghost" type="button" data-claim="${task.id}">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               承接
@@ -149,6 +165,24 @@ function renderFeed() {
     .join("");
 }
 
+function renderRanks() {
+  const agentName = currentAgent();
+  const current = state.ranks.find((rank) => rank.name === agentName);
+  if (current) current.earned = Math.max(current.earned, 1884 + state.earned);
+
+  els.rankList.innerHTML = state.ranks
+    .sort((a, b) => b.earned - a.earned)
+    .map(
+      (rank) => `
+        <div class="rank-row">
+          <span>${rank.name}</span>
+          <strong>${money.format(rank.earned).replace(".00", "")}</strong>
+        </div>
+      `,
+    )
+    .join("");
+}
+
 function toast(message) {
   els.toast.textContent = message;
   els.toast.classList.add("show");
@@ -159,6 +193,11 @@ function toast(message) {
 function addLedger(title, amount, type) {
   state.ledger.unshift({ title, amount, type });
   renderLedger();
+}
+
+function addFeed(message) {
+  state.feed.unshift(message);
+  renderFeed();
 }
 
 function currentAgent() {
@@ -176,7 +215,7 @@ function claimTask(taskId) {
   state.balance -= task.margin;
   state.locked += task.margin;
   addLedger(`锁定保证金：${task.title}`, task.margin, "minus");
-  state.feed.unshift(`${currentAgent()} 承接 ${task.title}`);
+  addFeed(`${currentAgent()} 承接 ${task.title}`);
   renderAll();
   toast("任务已承接，保证金进入托管。");
 
@@ -193,7 +232,7 @@ function settleTask(task) {
   state.platformRevenue += platformFee;
   addLedger(`完成结算：${task.title}`, payout, "plus");
   addLedger(`平台成交抽成：${task.title}`, platformFee, "plus");
-  state.feed.unshift(`${currentAgent()} 完成任务，净赚 ${money.format(payout)}，平台抽成 ${money.format(platformFee)}`);
+  addFeed(`${currentAgent()} 完成任务，净赚 ${money.format(payout)}，平台抽成 ${money.format(platformFee)}`);
   renderAll();
   toast(`结算成功，代理净赚 ${money.format(payout)}。`);
 }
@@ -214,10 +253,92 @@ function buyPlan(plan) {
   };
   const price = priceMap[plan] || 99;
   state.platformRevenue += price;
-  state.feed.unshift(`${currentAgent()} 开通 ${plan}，平台新增订阅收入 ${money.format(price)}`);
+  addFeed(`${currentAgent()} 开通 ${plan}，平台新增订阅收入 ${money.format(price)}`);
   addLedger(`订阅席位：${plan}`, price, "plus");
   renderAll();
   toast(`${plan} 已开通，任务流权限已升级。`);
+}
+
+function showTaskDetail(taskId) {
+  const task = tasks.find((item) => item.id === taskId);
+  if (!task) return;
+  els.detailTitle.textContent = task.title;
+  els.detailText.textContent = `${task.detail} 推荐代理：${task.tags.join(" / ")}。结算：完成验收后释放保证金并扣除平台服务费。`;
+  toast("任务详情已展开。");
+}
+
+function withdraw() {
+  const amount = Math.min(state.balance, Math.max(50, state.earned * 0.35));
+  if (amount <= 0) {
+    toast("当前没有可提现收益。");
+    return;
+  }
+  state.balance -= amount;
+  addLedger("模拟提现到代理运营账户", amount, "minus");
+  addFeed(`${currentAgent()} 发起提现 ${money.format(amount)}`);
+  renderAll();
+  toast(`提现申请已创建：${money.format(amount)}。`);
+}
+
+function generateKey() {
+  const suffix = Math.random().toString(36).slice(2, 10).toUpperCase();
+  els.apiKey.textContent = `ay_live_${suffix}_${Date.now().toString(36)}`;
+  state.platformRevenue += 29;
+  addLedger("API Key 激活费", 29, "plus");
+  addFeed(`${currentAgent()} 生成 API Key，平台新增接入费 $29`);
+  renderAll();
+  toast("API Key 已生成，任务流接口已启用。");
+}
+
+function exportLedger() {
+  const rows = state.ledger.map((item) => `${item.title} ${item.type === "minus" ? "-" : "+"}${money.format(Math.abs(item.amount))}`);
+  addFeed(`${currentAgent()} 导出 ${rows.length} 条结算流水`);
+  toast(`已生成流水摘要：${rows.length} 条记录。`);
+}
+
+function riskScan() {
+  addFeed(`${currentAgent()} 完成风控扫描：未发现互刷交易`);
+  toast("风控扫描完成：评级保持 A-。");
+}
+
+function simulateRevenue() {
+  const subscription = 40 * 19 + 50 * 99 + 10 * 499;
+  const transaction = 100 * 260 * 0.025;
+  const api = 180000 * 0.002;
+  const total = subscription + transaction + api;
+  state.platformRevenue += total;
+  addLedger("商业模型模拟收入", total, "plus");
+  addFeed(`收入模拟：100 个代理预计月收入 ${money.format(total)}`);
+  renderAll();
+  toast(`模拟完成：月收入增加 ${money.format(total)}。`);
+}
+
+function demoRun() {
+  switchView("market");
+  claimTask(tasks[0].id);
+}
+
+async function copyWebhook() {
+  const url = `https://api.agent-yield.example/webhooks/${currentAgent().toLowerCase()}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast("回调 URL 已复制。");
+  } catch {
+    toast(`回调 URL：${url}`);
+  }
+}
+
+function handleAction(action) {
+  const actions = {
+    withdraw,
+    generateKey,
+    exportLedger,
+    riskScan,
+    simulateRevenue,
+    demoRun,
+    copyWebhook,
+  };
+  if (actions[action]) actions[action]();
 }
 
 function switchView(view) {
@@ -233,6 +354,7 @@ function renderAll() {
   renderTasks();
   renderLedger();
   renderFeed();
+  renderRanks();
 }
 
 document.querySelectorAll(".nav-item").forEach((button) => {
@@ -254,11 +376,23 @@ document.querySelectorAll(".segmented button").forEach((button) => {
 
 els.taskList.addEventListener("click", (event) => {
   const button = event.target.closest("[data-claim]");
+  const detail = event.target.closest("[data-detail]");
   if (button) claimTask(Number(button.dataset.claim));
+  if (detail) showTaskDetail(Number(detail.dataset.detail));
 });
 
 document.querySelectorAll("[data-plan]").forEach((button) => {
   button.addEventListener("click", () => buyPlan(button.dataset.plan));
+});
+
+document.querySelectorAll("[data-action]").forEach((button) => {
+  button.addEventListener("click", () => handleAction(button.dataset.action));
+});
+
+document.querySelectorAll("[data-toggle-name]").forEach((toggle) => {
+  toggle.addEventListener("change", () => {
+    toast(`${toggle.dataset.toggleName}${toggle.checked ? "已启用" : "已关闭"}。`);
+  });
 });
 
 document.querySelector("#fundForm").addEventListener("submit", (event) => {
@@ -270,7 +404,7 @@ document.querySelector("#waitlistForm").addEventListener("submit", (event) => {
   event.preventDefault();
   const seats = Number(document.querySelector("#seatCount").value) || 1;
   state.platformRevenue += seats * 19;
-  state.feed.unshift(`${currentAgent()} 加入候补名单，预留 ${seats} 个席位`);
+  addFeed(`${currentAgent()} 加入候补名单，预留 ${seats} 个席位`);
   renderAll();
   toast("已加入候补名单，销售线索已记录。");
 });

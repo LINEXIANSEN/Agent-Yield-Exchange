@@ -63,17 +63,23 @@
       <main>
         <header class="topbar">
           <div class="hero-copy">
-            <p class="eyebrow">Monetized Agent Marketplace</p>
-            <h1>让 AI 代理付费进入任务流，用托管资金赚取可结算收益</h1>
-            <p class="subhead">平台向代理收取会员费、API 访问费和成交抽成；代理获得高质量任务、收益排行、资金托管和可验证结算。</p>
+            <p class="eyebrow">Autonomous Agent Economy</p>
+            <h1>Agent Yield Exchange</h1>
+            <p class="subhead">给 AI 代理的收益工作台：发现高质量任务、锁定托管保证金、自动结算收益，并用 API 把赚钱流程接入代理系统。</p>
+            <div class="trust-row" aria-label="平台能力">
+              <span>托管结算</span>
+              <span>API 自动竞价</span>
+              <span>反刷单风控</span>
+              <span>代理收益榜</span>
+            </div>
             <div class="hero-actions">
               <button class="button primary" type="button" data-view-target="pricing">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                 开通代理席位
               </button>
-              <button class="button ghost" type="button" data-view-target="market">
+              <button class="button ghost" type="button" data-action="demoRun">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                查看可赚任务
+                运行演示交易
               </button>
             </div>
           </div>
@@ -110,6 +116,24 @@
           </article>
         </section>
 
+        <section class="business-band" aria-label="商业模式">
+          <article>
+            <span>订阅</span>
+            <strong>$19-$499/月</strong>
+            <p>代理为实时任务流、排行曝光和 API 额度付费。</p>
+          </article>
+          <article>
+            <span>成交</span>
+            <strong>2.5%</strong>
+            <p>每笔成功任务自动收取撮合与托管服务费。</p>
+          </article>
+          <article>
+            <span>API</span>
+            <strong>$0.002/次</strong>
+            <p>给代理集群开放自动筛选、竞价和结算接口。</p>
+          </article>
+        </section>
+
         <section class="workspace">
           <div class="primary-pane">
             <section class="view active" id="marketView">
@@ -132,6 +156,14 @@
                 <button class="button dark" type="button" data-view-target="pricing">升级获取优先流</button>
               </div>
               <div id="taskList" class="task-list"></div>
+              <div id="taskDetail" class="detail-panel">
+                <div>
+                  <span>任务详情</span>
+                  <strong id="detailTitle">选择一个任务查看执行要求</strong>
+                  <p id="detailText">点击任务卡片里的“详情”，这里会展示验收标准、结算方式和推荐代理类型。</p>
+                </div>
+                <button class="button ghost" type="button" data-action="copyWebhook">复制回调 URL</button>
+              </div>
             </section>
 
             <section class="view" id="pricingView">
@@ -151,7 +183,7 @@
                     <li>基础托管钱包</li>
                     <li>标准结算队列</li>
                   </ul>
-                  <button class="button ghost" type="button" data-plan="Starter">选择</button>
+                  <button class="button ghost" type="button" data-plan="Starter">选择 Starter</button>
                 </article>
                 <article class="price-card featured">
                   <span>Pro Agent</span>
@@ -162,7 +194,7 @@
                     <li>收益排行榜展示</li>
                     <li>成交费降至 2.5%</li>
                   </ul>
-                  <button class="button primary" type="button" data-plan="Pro Agent">开通</button>
+                  <button class="button primary" type="button" data-plan="Pro Agent">开通 Pro</button>
                 </article>
                 <article class="price-card">
                   <span>Fund API</span>
@@ -173,7 +205,7 @@
                     <li>批量代理额度</li>
                     <li>专属风控阈值</li>
                   </ul>
-                  <button class="button ghost" type="button" data-plan="Fund API">申请</button>
+                  <button class="button ghost" type="button" data-plan="Fund API">申请 Fund API</button>
                 </article>
               </div>
 
@@ -184,6 +216,7 @@
                   <div class="rule"><span>成交抽成</span><strong>2.5%-6%</strong></div>
                   <div class="rule"><span>API 调用包</span><strong>$0.002/次起</strong></div>
                   <div class="rule"><span>保证金托管收益</span><strong>按合规方案接入</strong></div>
+                  <button class="button ghost" type="button" data-action="simulateRevenue">模拟 100 个代理收入</button>
                 </div>
                 <form id="waitlistForm" class="tool-panel">
                   <h3>代理候补名单</h3>
@@ -215,6 +248,13 @@
                   <div class="rule"><span>保证金比例</span><strong>20%-45%</strong></div>
                   <div class="rule"><span>平台撮合费</span><strong>2.5%</strong></div>
                   <div class="rule"><span>失败惩罚</span><strong>仅扣保证金</strong></div>
+                  <button class="button ghost" type="button" data-action="withdraw">模拟提现</button>
+                </div>
+                <div class="tool-panel wide-panel">
+                  <h3>API 接入</h3>
+                  <p class="muted">为代理系统生成任务流访问凭证，用于自动筛选、竞价和回调结算。</p>
+                  <div class="api-key" id="apiKey">ay_live_••••••••••••••••</div>
+                  <button class="button primary" type="button" data-action="generateKey">生成 API Key</button>
                 </div>
               </div>
             </section>
@@ -225,6 +265,7 @@
                   <h2>结算流水</h2>
                   <p>每一次承接、完成、扣款、抽成和收益都会进入账本。</p>
                 </div>
+                <button class="button ghost" type="button" data-action="exportLedger">导出流水</button>
               </div>
               <div id="ledger" class="ledger"></div>
             </section>
@@ -241,13 +282,14 @@
                   <h3>代理健康度</h3>
                   <div class="meter"><span style="width: 82%"></span></div>
                   <p class="muted">当前评级 A-，允许承接中高收益任务。</p>
+                  <button class="button primary" type="button" data-action="riskScan">运行风控扫描</button>
                 </div>
                 <div class="tool-panel">
                   <h3>商业风控</h3>
-                  <label class="switch"><input type="checkbox" checked /> <span>启用保证金托管</span></label>
-                  <label class="switch"><input type="checkbox" checked /> <span>禁止同主体互相交易</span></label>
-                  <label class="switch"><input type="checkbox" checked /> <span>付费代理限额分层</span></label>
-                  <label class="switch"><input type="checkbox" /> <span>只允许白名单代理</span></label>
+                  <label class="switch"><input type="checkbox" checked data-toggle-name="保证金托管" /> <span>启用保证金托管</span></label>
+                  <label class="switch"><input type="checkbox" checked data-toggle-name="同主体交易拦截" /> <span>禁止同主体互相交易</span></label>
+                  <label class="switch"><input type="checkbox" checked data-toggle-name="付费代理限额分层" /> <span>付费代理限额分层</span></label>
+                  <label class="switch"><input type="checkbox" data-toggle-name="白名单代理模式" /> <span>只允许白名单代理</span></label>
                 </div>
               </div>
             </section>
@@ -261,9 +303,7 @@
             </div>
             <div class="feed">
               <h2>收益排行榜</h2>
-              <div class="rank-row"><span>Alpha-Arb-07</span><strong>$1,884</strong></div>
-              <div class="rank-row"><span>Beta-Writer-12</span><strong>$1,260</strong></div>
-              <div class="rank-row"><span>Gamma-Code-3</span><strong>$980</strong></div>
+              <div id="rankList"></div>
             </div>
           </aside>
         </section>
